@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>КТПН-10/0,4 кВ №113 — Схема и Данные</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #e9ecef;
+      color: #333;
+    }
+
+    /* Стили под печать А4 */
+    .page-a4 {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 15mm;
+      margin: 15px auto;
+      background: white;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      page-break-after: always;
+      position: relative;
+    }
+
+    h2 {
+      margin-top: 0;
+      border-bottom: 2px solid #0056b3;
+      padding-bottom: 8px;
+      color: #0056b3;
+    }
+
+    #map {
+      width: 100%;
+      height: 220mm;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .btn-container {
+      text-align: center;
+      margin-bottom: 20px;
+      position: sticky;
+      top: 10px;
+      z-index: 1000;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      font-size: 15px;
+      font-weight: bold;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 0 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .btn-print { background: #007bff; }
+    .btn-download { background: #28a745; text-decoration: none; display: inline-block; }
+
+    /* Таблица данных */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 12px;
+    }
+
+    th, td {
+      border: 1px solid #dee2e6;
+      padding: 6px 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f8f9fa;
+      color: #495057;
+    }
+
+    tr:nth-child(even) { background-color: #f9f9f9; }
+
+    /* Настройки для печати / сохранения в PDF */
+    @media print {
+      body { background: none; padding: 0; }
+      .btn-container { display: none; }
+      .page-a4 { box-shadow: none; margin: 0; padding: 10mm; width: 100%; height: auto; }
+      #map { height: 240mm; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="btn-container">
+    <button class="btn btn-print" onclick="window.print()">Скачать / Сохранить в PDF (А4)</button>
+    <a href="data.kml" download class="btn btn-download">Скачать файл KML</a>
+  </div>
+
+  <!-- СТРАНИЦА 1: КАРТА (А4) -->
+  <div class="page-a4">
+    <h2>КТПН-10/0,4 кВ №113 — Карта-схема ВЛ-0,4 кВ</h2>
+    <div id="map"></div>
+  </div>
+
+  <!-- СТРАНИЦА 2: ТАБЛИЦА ОБЪЕКТОВ (А4) -->
+  <div class="page-a4">
+    <h2>Перечень опор и линий КТПН №113</h2>
+    <table id="data-table">
+      <thead>
+        <tr>
+          <th>№</th>
+          <th>Наименование / Тип</th>
+          <th>Вид</th>
+          <th>Координаты</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
+
+  <script>
+    const map = L.map('map');
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    const tbody = document.querySelector('#data-table tbody');
+    let rowCount = 1;
+
+    // Скрипт загружает ваш data.kml
+    const runLayer = omnivore.kml('data.kml')
+      .on('ready', function() {
+        map.fitBounds(runLayer.getBounds());
+
+        runLayer.eachLayer(function(layer) {
+          if (layer.feature && layer.feature.properties) {
+            const name = layer.feature.properties.name || 'Без названия';
+            let type = 'Линия ВЛ';
+            let coords = 'Трасса';
+
+            if (layer.getLatLng) {
+              type = 'Опора';
+              const ll = layer.getLatLng();
+              coords = `${ll.lng.toFixed(6)}, ${ll.lat.toFixed(6)}`;
+            }
+
+            layer.bindPopup(`<b>${name}</b>`);
+
+            const row = `<tr>
+              <td>${rowCount++}</td>
+              <td><b>${name}</b></td>
+              <td>${type}</td>
+              <td>${coords}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+          }
+        });
+      })
+      .addTo(map);
+  </script>
+</body>
+</html>

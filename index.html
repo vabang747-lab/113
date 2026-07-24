@@ -76,11 +76,7 @@
       text-align: left;
     }
 
-    th {
-      background-color: #f8f9fa;
-      color: #495057;
-    }
-
+    th { background-color: #f8f9fa; color: #495057; }
     tr:nth-child(even) { background-color: #f9f9f9; }
 
     @media print {
@@ -104,14 +100,14 @@
   </div>
 
   <div class="page-a4">
-    <h2>Перечень опор и линий КТПН №113</h2>
+    <h2>Перечень объектов КТПН №113</h2>
     <table id="data-table">
       <thead>
         <tr>
           <th>№</th>
-          <th>Наименование / Опора</th>
-          <th>Вид объекта</th>
-          <th>Координаты</th>
+          <th>Наименование / Трасса</th>
+          <th>Тип геометрии</th>
+          <th>Длина / Статус</th>
         </tr>
       </thead>
       <tbody>
@@ -131,57 +127,56 @@
     const tbody = document.querySelector('#data-table tbody');
     let rowCount = 1;
 
-    fetch('data.geojson')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Файл data.geojson не найден в репозитории');
-        }
-        return response.json();
-      })
+    // Загрузка GeoJSON и стилизация как на geojson.io
+    fetch('data.geojson?v=' + new Date().getTime())
+      .then(response => response.json())
       .then(geojsonData => {
         const geoLayer = L.geoJSON(geojsonData, {
+          
+          // Стиль линий и полигонов (фиолетовый, как на geojson.io)
+          style: function (feature) {
+            return {
+              color: "#555555",    // Темно-серый контур линии
+              weight: 3,          // Толщина линии
+              opacity: 0.8,
+              fillColor: "#7e57c2",
+              fillOpacity: 0.4
+            };
+          },
+
+          // Отрисовка точечных элементов (если есть) мелким кружком
           pointToLayer: function (feature, latlng) {
             return L.circleMarker(latlng, {
-              radius: 5,
-              fillColor: "#007bff",
+              radius: 4,
+              fillColor: "#555555",
               color: "#ffffff",
-              weight: 1.5,
+              weight: 1,
               opacity: 1,
               fillOpacity: 0.9
             });
           },
+
           onEachFeature: function (feature, layer) {
             const props = feature.properties || {};
-            const name = props.name || props.Name || 'Без названия';
-            let type = 'Объект';
-            let coords = '—';
-
-            if (feature.geometry.type === 'Point') {
-              type = 'Опора / Точка';
-              coords = `${feature.geometry.coordinates[0].toFixed(6)}, ${feature.geometry.coordinates[1].toFixed(6)}`;
-            } else if (feature.geometry.type === 'LineString' || feature.geometry.type === 'MultiLineString') {
-              type = 'Линия ВЛ';
-              coords = 'Трасса';
-            } else if (feature.geometry.type === 'Polygon') {
-              type = 'Подстанция / Контур';
-              coords = 'Контур';
-            }
+            const name = props.name || props.Name || 'Линия ВЛ-0,4 кВ';
+            let geomType = feature.geometry ? feature.geometry.type : '—';
 
             layer.bindPopup(`<b>${name}</b>`);
 
             const row = `<tr>
               <td>${rowCount++}</td>
               <td><b>${name}</b></td>
-              <td>${type}</td>
-              <td>${coords}</td>
+              <td>${geomType}</td>
+              <td>Введена в схему</td>
             </tr>`;
             tbody.innerHTML += row;
           }
         }).addTo(map);
 
+        // Автоматически фокусируемся на всей трассе
         map.fitBounds(geoLayer.getBounds());
       })
-      .catch(err => console.error(err));
+      .catch(err => console.error('Ошибка загрузки GeoJSON:', err));
   </script>
 </body>
 </html>
